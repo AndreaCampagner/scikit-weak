@@ -1,6 +1,6 @@
 from ._ensemble import RRLClassifier
 from ._neighbors import SupersetKNeighborsClassifier
-from ._neighbors import DELIN
+from ._delin import DELIN
 
 __all__ = [
     "RRLClassifier",

@@ -15,51 +15,43 @@ class RRLClassifier(BaseEstimator, ClassifierMixin):
 
     Parameters
     ----------
-        estimator: object
-            Base estimator objects to be fitted. Should support predict and predict_proba
-        n_estimators : int, default=100
-            The number of trees to be fitted
-        missing : bool, default=False
-            Whether the input y will be passed in semi-supervised format or not
-        probs : ndarray or None, default=None
-            Default probability distribution to be used. Only used if missing=True. If probs is None
-            then use uniform distribution
-        resample : bool, default=False
-            Whether to perform bootstrapping or not
-        random_state : int, default=0
-            Random seed
+    :param estimator: Base estimator objects to be fitted. Should support predict and predict_proba
+    :type estimator: estimator class, default=DecisionTreeClassifier
+
+    :param n_estimators: The number of trees to be fitted
+    :type n_estimators: int, default=100
+
+    :param missing: Whether the input y will be passed in semi-supervised format or not
+    :type missing: bool, default=False
+
+    :param probs: Default probability distribution to be used. Only used if missing=True. If probs is None then use uniform distribution
+    :type probs: ndarray or None, default=None
+
+    :param resample: Whether to perform bootstrapping or not
+    :type resample: bool, default=False
+        
+    :param random_state: Random seed
+    :type random_state: int, default=0
 
     Attributes
     ----------
-        y_probs: ndarray
-            If y is in prob format, then target is a copy of y. Otherwise it is y in prob format
-        classifiers: list of estimators
-            The collection of fitted estimators
-        ys: list of ndarrays
-            The collection of sampled target labels. Each ndarray in ys has the same shape as y
-        Xs: list of ndarrays
-            The collection of bootstrapped datasets. Each ndarray in Xs has the same shape as X.
-            If resample=False, then Xs is empty.
-        n_classes: int
-            The number of unique classes in y
-        classes_: int
-            The unique classes in y
+    :ivar y_probs: If y is in prob format, then target is a copy of y. Otherwise it is y in prob format
+    :vartype probs: ndarray
 
-    Methods
-    -------
-        fit(X, y)
-            Fit the RRLClassifier model
-        transform(X, y)
-            Transform the data (only X, y is ignored) using the support_ attribute of the fitted model
-        fit_transform(X, y)
-            Fit to data, then transform it
+    :ivar classifiers: The collection of fitted estimators
+    :vartype classifiers: list of estimators
 
-    References
-    ----------
-    [1] Campagner, A., Ciucci, D., Svensson, C. M., Figge, M. T., & Cabitza, F. (2021).
-        Ground truthing from multi-rater labeling with three-way decision and possibility theory.
-        Information Sciences, 545, 771-790.
-        https://doi.org/10.1016/j.ins.2020.09.049
+    :ivar ys: The collection of sampled target labels. Each ndarray in ys has the same shape as y
+    :vartype ys: list of ndarrays
+    
+    :ivar Xs: The collection of bootstrapped datasets. Each ndarray in Xs has the same shape as X. If resample=False, then Xs is empty.
+    :vartype Xs: list of ndarrays
+    
+    :ivar n_classes: The number of unique classes in y
+    :vartype n_classes: int
+
+    :ivar classes_: The unique classes in y
+    :vartype classes_: ndarray
     '''
   def __init__(self, estimator=DecisionTreeClassifier, n_estimators=100, missing=False, probs=None, resample=False, random_state=0):
     self.n_estimators = n_estimators
@@ -70,6 +62,9 @@ class RRLClassifier(BaseEstimator, ClassifierMixin):
     self.missing = missing
 
   def fit(self, X, y):
+    """
+        Fit the RRLClassifier model
+    """
     np.random.seed(self.random_state)
     self.X = X
     self.y = y
@@ -120,6 +115,9 @@ class RRLClassifier(BaseEstimator, ClassifierMixin):
         self.y_probs[t,self.y[t]] = 1.0
   
   def predict(self, X):
+    """
+        Returns predictions for the given X
+    """
     output = np.zeros((X.shape[0], self.n_classes_))
     sorter = np.argsort(self.classes_)
     for i in range(self.n_estimators):
@@ -128,6 +126,9 @@ class RRLClassifier(BaseEstimator, ClassifierMixin):
     return self.classes_[np.argmax(output, axis= 1)]
 
   def predict_proba(self, X):
+    """
+        Returns probability distributions for the given X
+    """
     output = np.zeros((X.shape[0], self.n_classes_))
     sorter = np.argsort(self.classes_)
     for i in range(self.n_estimators):
