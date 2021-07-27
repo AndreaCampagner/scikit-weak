@@ -1,5 +1,5 @@
 # skweak (scikit-weakly-supervised)
- A library featuring utilities and algorithms for weakly supervised ML.
+ A package featuring utilities and algorithms for weakly supervised ML.
  Should be (more-or-less) compatible with scikit-learn!
  It collects original algorithms and methods developed at the MUDI lab (DISCo dept., University of Milano-Bicocca, Milan, Italy),
  as well as some algorithms available in the literature. Some references:

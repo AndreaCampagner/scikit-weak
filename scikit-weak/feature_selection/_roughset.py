@@ -44,10 +44,11 @@ def bet_entropy(orthop, n_classes):
 
 class RoughSetSelector(TransformerMixin, BaseEstimator):
     '''
-    A class to perform Feature Selection based on Pawlak Rough Sets by searching for entropy reducts.
-    Supports weakly supervised data. In this case, the y input to the fit method should be given as
-    a ndarray of lists, in which each list contains all candidate labels for the corresponding instance.
-    Currently accepts only discrete datasets.
+    A class to perform Feature Selection based on Rough Sets by searching for entropy reducts [1].
+    Support both fully supervised and weakly supervised data. In the latter case, the y input to
+    the fit method should be given as a ndarray of lists, in which each list contains all candidate
+    labels for the corresponding instance.
+    Supports both discrete (using Pawlak Rough Sets) and continuous (using Neighborhood Rough Sets) datasets.
 
     Parameters
     ----------
@@ -63,6 +64,8 @@ class RoughSetSelector(TransformerMixin, BaseEstimator):
         discrete: bool, default=True
             Whether the input X is discrete or not. If discrete=True then use equivalence-based
             (i.e. Pawlak) Rough Sets. If discrete=False use neighborhood-based Rough Sets.
+        metric : strinf or function, default='minkowski'
+            Metric to be used with neighborhood-based Rough Sets. Only used if discrete=False
         neighborhood: {'delta', 'nearest'}, default='nearest'
             Type of neighborhood-based Rough Sets to be used. If neighborhood='delta', then
             use delta-neighborhood Rough Sets: all neigbhors with distance <= radius are selected.
@@ -100,6 +103,13 @@ class RoughSetSelector(TransformerMixin, BaseEstimator):
             Transform the data (only X, y is ignored) using the support_ attribute of the fitted model
         fit_transform(X, y)
             Fit to data, then transform it
+
+    References
+    ----------
+    [1] Campagner, A., Ciucci, D., Hüllermeier, E. (2021). 
+        Rough set-based feature selection for weakly labeled data.
+        International Journal of Approximate Reasoning, 136, 150-167.
+        https://doi.org/10.1016/j.ijar.2021.06.005.
     '''
     def __init__(self, entropy='oau', method='approximate', epsilon = 0.0,
                  n_iters = 100, discrete = True, metric='minkowski',
@@ -134,7 +144,8 @@ class RoughSetSelector(TransformerMixin, BaseEstimator):
             
         self.data = pd.DataFrame(X)
         self.data['target'] = self.target
-        self.n_classes = len(np.unique(np.vstack(data["target"][:]).flatten()))
+        self.classes = np.unique(np.add.reduce(self.data["target"].values))
+        self.n_classes = len(self.classes)
         self.attributes = list(self.data.columns[:-1].values)
         
         if self.method == 'approximate':
@@ -165,7 +176,7 @@ class RoughSetSelector(TransformerMixin, BaseEstimator):
                 if self.discrete:
                     grouped_df = self.data.groupby(list(i))
 
-                    for key, item in grouped_df:
+                    for key, _ in grouped_df:
                         classes = grouped_df.get_group(key)['target']
                         ent = self.entropy_function(classes, self.n_classes)
                         h_temp += len(classes)/self.data.shape[0]*ent
@@ -176,9 +187,9 @@ class RoughSetSelector(TransformerMixin, BaseEstimator):
                     nn.fit(self.data.loc[:,i])
                     indices = []
                     if self.neighborhood == 'nearest':
-                        _ , indices = nn.kneighbors(data.loc[:,i])
+                        _ , indices = nn.kneighbors(self.data.loc[:,i])
                     elif self.neighborhood == 'delta':
-                        _, indices = nn.radius_neighbors(data.loc[:,i])
+                        _, indices = nn.radius_neighbors(self.data.loc[:,i])
                     else:
                         raise ValueError("%s is not an allowed value for 'neighborhood' parameter" % self.neighborhood)
                     for ind in indices:
@@ -200,8 +211,8 @@ class RoughSetSelector(TransformerMixin, BaseEstimator):
             best_h = 0
             
             if self.discrete:
-                grouped_df = data.groupby(list(self.attributes))
-                for key, item in grouped_df:
+                grouped_df = self.data.groupby(list(self.attributes))
+                for key, _ in grouped_df:
                     classes = grouped_df.get_group(key)['target']
                     ent = self.entropy_function(classes, self.n_classes)
                     best_h += len(classes)/self.data.shape[0]*ent
@@ -212,9 +223,9 @@ class RoughSetSelector(TransformerMixin, BaseEstimator):
                 nn.fit(self.data.loc[:,self.attributes])
                 indices = []
                 if self.neighborhood == 'nearest':
-                    _ , indices = nn.kneighbors(data.loc[:,self.attributes])
+                    _ , indices = nn.kneighbors(self.data.loc[:,self.attributes])
                 elif self.neighborhood == 'delta':
-                    _, indices = nn.radius_neighbors(data.loc[:,self.attributes])
+                    _, indices = nn.radius_neighbors(self.data.loc[:,self.attributes])
                 else:
                     raise ValueError("%s is not an allowed value for 'neighborhood' parameter" % self.neighborhood)
                 
@@ -234,7 +245,7 @@ class RoughSetSelector(TransformerMixin, BaseEstimator):
                     
                     if self.discrete:
                         grouped_df = self.data.groupby(list(i))
-                        for key, item in grouped_df:
+                        for key, _ in grouped_df:
                             classes = grouped_df.get_group(key)['target']
                             ent = self.entropy_function(classes, self.n_classes)
                             h_temp += len(classes)/self.data.shape[0]*ent
@@ -246,9 +257,9 @@ class RoughSetSelector(TransformerMixin, BaseEstimator):
                                           
                         indices = []
                         if self.neighborhood == 'nearest':
-                            _ , indices = nn.kneighbors(data.loc[:,i])
+                            _ , indices = nn.kneighbors(self.data.loc[:,i])
                         elif self.neighborhood == 'delta':
-                            _, indices = nn.radius_neighbors(data.loc[:,i])
+                            _, indices = nn.radius_neighbors(self.data.loc[:,i])
                             indices = [list(ind) for ind in indices]
                         else:
                             raise ValueError("%s is not an allowed value for 'neighborhood' parameter" % self.neighborhood)
