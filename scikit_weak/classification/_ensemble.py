@@ -1,5 +1,5 @@
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import ExtraTreeClassifier
 from sklearn.preprocessing import normalize
 from sklearn.utils import resample
 import numpy as np
@@ -16,7 +16,7 @@ class RRLClassifier(BaseEstimator, ClassifierMixin):
     Parameters
     ----------
     :param estimator: Base estimator objects to be fitted. Should support predict and predict_proba
-    :type estimator: estimator class, default=DecisionTreeClassifier
+    :type estimator: estimator class, default=ExtraTreeClassifier
 
     :param n_estimators: The number of trees to be fitted
     :type n_estimators: int, default=100
@@ -53,7 +53,7 @@ class RRLClassifier(BaseEstimator, ClassifierMixin):
     :ivar classes_: The unique classes in y
     :vartype classes_: ndarray
     '''
-  def __init__(self, estimator=DecisionTreeClassifier, n_estimators=100, missing=False, probs=None, resample=False, random_state=0):
+  def __init__(self, estimator=ExtraTreeClassifier, n_estimators=100, missing=False, probs=None, resample=False, random_state=0):
     self.n_estimators = n_estimators
     self.random_state = random_state
     self.estimator = estimator
