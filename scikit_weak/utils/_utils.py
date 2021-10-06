@@ -20,12 +20,11 @@ def to_probs(ys, uniform=False):
                 sorted_values = np.sort(values)[::-1]
                 if sorted_values[-1] != 0.0:
                     sorted_values = np. append(sorted_values, 0.0)
-                it = np.nditer(sorted_values, flags=['f_index'], order="K")
-                for val in it:
-                    if it.index == len(sorted_values) - 1:
-                        break
+                for j in range(len(sorted_values) - 1):
+                    val = sorted_values[j]
                     idx = np.where(ys[i,:] >= val)
-                    probs[i, idx[0]] = (val - sorted_values[it.index+1])/len(idx[0])
+                    assign = (val - sorted_values[j+1])/len(idx[0])
+                    probs[i, idx] += assign
         return probs
 
 
