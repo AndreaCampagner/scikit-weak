@@ -1,3 +1,5 @@
 **/__pycache__/*
 docs/build
 dist/*
+scikit_weak.egg-info/*
+examples/.ipynb_checkpoints/*

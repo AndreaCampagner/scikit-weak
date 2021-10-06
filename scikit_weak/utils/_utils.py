@@ -13,18 +13,19 @@ def to_probs(ys, uniform=False):
     else:
         probs = np.zeros(ys.shape)
         if uniform:
-            probs = ys/np.sum(ys, axis=1)
+            probs = ys/np.sum(ys, axis=1)[:, np.newaxis]
         else:
             for i in range(ys.shape[0]):
                 values = np.unique(ys[i])
                 sorted_values = np.sort(values)[::-1]
-                sorted_values = np.append(sorted_values, 0.0)
-                it = np.nditer(sorted_values, flags=['f_index'])
+                if sorted_values[-1] != 0.0:
+                    sorted_values = np. append(sorted_values, 0.0)
+                it = np.nditer(sorted_values, flags=['f_index'], order="K")
                 for val in it:
-                    if it == len(sorted_values) - 1:
+                    if it.index == len(sorted_values) - 1:
                         break
-                    idx = np.where(values >= val)
-                    probs[i, idx] = (val - sorted_values[it+1])/len(idx)
+                    idx = np.where(ys[i,:] >= val)
+                    probs[i, idx[0]] = (val - sorted_values[it.index+1])/len(idx[0])
         return probs
 
 
