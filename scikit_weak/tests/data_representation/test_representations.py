@@ -27,8 +27,6 @@ def test_set_label_from_list(discrete_set_label):
     assert DiscreteFuzzyLabel([2,3,4], 5) == discrete_set_label
 
 def test_alpha_cut_discrete(discrete_fuzzy_label, discrete_set_label):
-    print(discrete_fuzzy_label.get_cut(0.7))
-    print(DiscreteSetLabel(np.array([0, 0, 1.0, 1.0, 1]), 5))
     assert discrete_fuzzy_label.get_cut(0.7) == discrete_set_label
 
 def test_membership_discrete(discrete_fuzzy_label):

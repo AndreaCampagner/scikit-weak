@@ -95,7 +95,6 @@ class DiscreteFuzzyLabel(DiscreteWeakLabel, FuzzyLabel):
             assign = (val - sorted_values[j+1])/len(idx[0])
             probs[idx] += assign
 
-        print(probs)
         return np.random.choice(range(self.__n_classes), p=probs)
 
     def __to_array_encoding(self, classes):
