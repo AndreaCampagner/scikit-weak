@@ -1,7 +1,7 @@
 DELIN
 ============================
 
-.. autoclass:: scikit_weak.classification.DELIN
+.. autoclass:: scikit_weak.feature_selection.DELIN
     :members:
 
 References
