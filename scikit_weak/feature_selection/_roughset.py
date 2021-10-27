@@ -1,74 +1,32 @@
 import numpy as np
 import itertools
-import pandas as pd
-from sklearn.base import BaseEstimator, TransformerMixin
-import scipy.stats as stats
-from sklearn.neighbors import NearestNeighbors
-
-def oau_entropy(orthop, n_classes):
-    orthop_copy = np.copy(orthop)
-    probs = np.zeros([n_classes, len(orthop)])
-    i = 0
-    for elem in orthop:
-        for cl in elem:
-            probs[cl, i] = 1.0
-        i += 1
-
-    tots = np.sum(probs, axis=1)
-    indices = np.argsort(tots)[::-1]
-    for i in indices:
-        for j in range(len(orthop)):
-            if i in orthop_copy[j]:
-                orthop_copy[j] = [i]
-    orthop_copy = np.array([t[0] for t in orthop_copy])
-    probs = np.zeros([n_classes])
-    for elem in orthop_copy:
-        probs[elem] += 1.0
-    probs /= sum(probs)
-    return stats.entropy(probs, base=2)
-
-def bet_entropy(orthop, n_classes):
-        probs = np.zeros([n_classes])
-        unif = np.ones([n_classes])
-        for elem in orthop:
-            for cl in elem:
-                probs[cl] += 1.0/len(elem)
-        probs /= sum(probs)
-        unif = unif * (probs > 0)
-        unif /= sum(unif)
-        num =  stats.entropy(probs, base=2)
-        den = stats.entropy(unif, base=2)
-        h = 0 if num == 0 else num/den
-        return h
+from sklearn.base import BaseEstimator, TransformerMixin, clone
+from ..classification import WeaklySupervisedKNeighborsClassifier, WeaklySupervisedRadiusClassifier
+from sklearn.metrics import accuracy_score
 
 
 class RoughSetSelector(TransformerMixin, BaseEstimator):
     """
-    A class to perform Feature Selection based on Rough Sets by searching for entropy reducts [1].
-    Support both fully supervised and weakly supervised data. In the latter case, the y input to
-    the fit method should be given as a ndarray of lists, in which each list contains all candidate
-    labels for the corresponding instance.
+    A class to perform Feature Selection based on Rough Sets by searching for reducts [1].
+    The y input to the fit method should be given as an iterable of DiscreteWeakLabel.
     Supports both discrete (using Pawlak Rough Sets) and continuous (using Neighborhood Rough Sets) datasets.
 
     Parameters
     ----------
-    :param entropy: The entropy measure to be used
-    :type entropy: {'oau', 'bet'}, default='oau'
-
-    :param method: The search strategy to be used. 'approximate' is similar to RFE, having complexity O(n^2). 'brute' is a brute-force search strategy, all possible combinations of features are evaluated, with complexity O(2^n)
-    :type method: {'approximate', 'brute'}, default='approximate'
+    :param search_strategy: The search strategy to be used. 'approximate' is similar to RFE, having complexity O(n^2). 'brute' is a brute-force search strategy, all possible combinations of features are evaluated, with complexity O(2^n)
+    :type search_strategy: {'approximate', 'brute'}, default='approximate'
 
     :param epsilon: The approximation factor. Should be a number between 0.0 and 1.0 (excluded)
     :type epsilon: float, default=0.0
 
-    :param n_iters: Number of iterations to be used when method='approximate'. Not used if method='brute'
+    :param n_iters: Number of iterations to be used when search_strategy='approximate'. Not used if search_strategy='brute'
     :type n_iters: int, default=100
 
     :param discrete: Whether the input X is discrete or not. If discrete=True then use equivalence-based
         (i.e. Pawlak) Rough Sets. If discrete=False use neighborhood-based Rough Sets.
     :type discrete: bool, default=True
         
-    :param metric: Metric to be used with neighborhood-based Rough Sets. Only used if discrete=False
+    :param metric: Metric to be used with neighborhood-based Rough Sets. Only used if discrete=False. If discrete=True, then metric="hamming"
     :type metric: string or function, default='minkowski'
         
     :param neighborhood: Type of neighborhood-based Rough Sets to be used. If neighborhood='delta', then
@@ -84,32 +42,21 @@ class RoughSetSelector(TransformerMixin, BaseEstimator):
     :param radius: Radius to select neighbors. Only used if discrete=False and neighborhood='delta'
     :type radius: float, default=1.0
 
-    :param random_state: Randomization seed. Used only if method='approximate'
-    :type random_state: int, default=0
+    :param random_state: Randomization seed. Used only if search_strategy='approximate'
+    :type random_state: int, default=None
 
     Attributes
     ----------
-    :ivar target: If y is weakly supervised, then target is a copy of y. Otherwise all single-valued elements are mapped to arrays
-    :vartype target: ndarray of objects
-
-    :ivar entropy_function: The entropy function to be used
-    :vartype entropy_function: function
-
-    :ivar n_classes: The number of unique classes in y
+    :ivar __n_classes: The number of unique classes in y
     :vartype n_classes: int
 
-    :ivar reducts: The list of reducts (sets of selected features with minimal entropy). If method='approximate', reducts always contains a single set of features. If method='brute', reducts contains the list of all minimal reducts.
-    :vartype reducts: list
-
-    :ivar support_: he mask of selected features. If method='brute' contains the mask corresponding to the first
-        reduct in attribute reducts
-    :vartype support_: ndarray of type Bool
+    :ivar __reducts: The list of minimal reducts. If search_strategy='approximate', reducts always contains a single set of features. If search_strategy='brute', reducts contains the list of all minimal reducts.
+    :vartype __reducts: list
     """
-    def __init__(self, entropy='oau', method='approximate', epsilon = 0.0,
+    def __init__(self, search_strategy='approximate', epsilon = 0.0,
                  n_iters = 100, discrete = True, metric='minkowski',
-                 neighborhood='nearest', n_neighbors=3, radius=1.0, random_state = 0):
-        self.entropy = entropy
-        self.method = method
+                 neighborhood='nearest', n_neighbors=3, radius=1.0, random_state = None):
+        self.search_strategy = search_strategy
         self.epsilon = epsilon
         self.n_iters = n_iters
         self.random_state = random_state
@@ -123,43 +70,58 @@ class RoughSetSelector(TransformerMixin, BaseEstimator):
         """
         Fit the RoughSetSelector model
         """
-        self.support_ = np.zeros(X.shape[1], dtype=bool)
-        self.reducts_ = []
-        self.target = y
+        state = np.random.get_state()
+        if not (self.random_state is None):
+            np.random.seed(self.random_state)
 
-        self.entropy_function = np.nan
-        if self.entropy == 'oau':
-            self.entropy_function = oau_entropy
-        elif self.entropy == 'bet':
-            self.entropy_function = bet_entropy
-        else:
-            raise ValueError("%s is not an allowed value for 'entropy' parameter." % self.entropy)
-        
-        self.target = y
-        if y.dtype != np.dtype('O'):
-            self.target = [[val] for val in y]
+
+        self.__X = X
+        self.__dim = self.__X.shape[1]
+        self.__reducts = []
+        self.__y = np.array(y)
+        self.__n_classes = self.__y[0].n_classes
             
-        self.data = pd.DataFrame(X)
-        self.data['target'] = self.target
-        self.classes = np.unique(np.add.reduce(self.data["target"].values))
-        self.n_classes = len(self.classes)
-        self.attributes = list(self.data.columns[:-1].values)
-        
-        if self.method == 'approximate':
-            self.reducts_ = list(self.__find_approx_reducts__())
-            self.support_[self.reducts_] = True
-        elif self.method == 'brute':
-            self.reducts_ = self.__find_reducts__()
-            self.support_[list(self.reducts_[0])] = True
+        self.__nn = None
+        if self.discrete:
+            self.__nn = WeaklySupervisedRadiusClassifier(radius = 0.0,
+                                          metric = 'hamming')
+        elif self.neighborhood == 'delta':
+            self.__nn = WeaklySupervisedRadiusClassifier(radius=self.radius,
+                                           metric=self.metric)
+        elif self.neighborhood == 'nearest':
+            self.__nn = WeaklySupervisedKNeighborsClassifier(k = self.n_neighbors,
+                                      metric = self.metric)
         else:
-            raise ValueError("%s is not an allowed value for 'method' parameter." % self.method)
+            raise ValueError("%s is not an allowed value for 'neighborhood' parameter" % self.neighborhood)
+
+        self.__nn_all = clone(self.__nn)
+        self.__nn_all.fit(self.__X, self.__y)
+        
+        if self.search_strategy == 'approximate':
+            self.__reducts = list(self.__find_approx_reducts())
+        elif self.search_strategy == 'brute':
+            self.__reducts = self.__find_reducts()
+        else:
+            raise ValueError("%s is not an allowed value for 'search_strategy' parameter." % self.search_strategy)
+
+        if not (self.random_state is None):
+            np.random.set_state(state)
         return self
     
-    def transform(self, X, y):
+    def transform(self, X, y=None):
         """
-        Transform the data (only X, y is ignored) using the support_ attribute of the fitted model
+        Transform the data (only X, y is ignored) selecting a reduct at random
         """
-        return X[:, self.support_]
+        state = np.random.get_state()
+        if not (self.random_state is None):
+            np.random.seed(self.random_state)
+            
+        feature_set = np.random.choice(len(self.__reducts))
+
+        if not (self.random_state is None):
+            np.random.set_state(state)
+
+        return X[:, self.__reducts[feature_set]]
     
     def fit_transform(self, X, y):
         """
@@ -168,75 +130,31 @@ class RoughSetSelector(TransformerMixin, BaseEstimator):
         self.fit(X, y)
         return self.transform(X, y)
     
-    def __find_reducts__(self):
-        h = np.inf
+    def __find_reducts(self):
         reducts = []
-        min_len = len(self.attributes)
-        for k in range(len(self.attributes),0,-1):
-            for i in itertools.combinations(range(len(self.attributes)), k):
-                h_temp = 0
-                
-                if self.discrete:
-                    grouped_df = self.data.groupby(list(i))
+        min_len = self.__dim
+        for k in range(self.__dim, 0, -1):
+            for i in itertools.combinations(range(self.__dim), k):
+                red = np.array(list(i))
+                temp_X = self.__X[:, red].copy()
+                self.__nn.fit(temp_X, self.__y)
 
-                    for key, _ in grouped_df:
-                        classes = grouped_df.get_group(key)['target']
-                        ent = self.entropy_function(classes, self.n_classes)
-                        h_temp += len(classes)/self.data.shape[0]*ent
-                else:
-                    nn = NearestNeighbors(n_neighbors = self.n_neighbors,
-                                          radius = self.radius,
-                                          metric = self.metric)
-                    nn.fit(self.data.loc[:,i])
-                    indices = []
-                    if self.neighborhood == 'nearest':
-                        _ , indices = nn.kneighbors(self.data.loc[:,i])
-                    elif self.neighborhood == 'delta':
-                        _, indices = nn.radius_neighbors(self.data.loc[:,i])
-                    else:
-                        raise ValueError("%s is not an allowed value for 'neighborhood' parameter" % self.neighborhood)
-                    for ind in indices:
-                        x = self.data["target"][ind]
-                        h_temp += self.entropy_function(x, self.n_classes)
-
-                if h_temp <= h - np.log2([1 - self.epsilon]):
-                    reducts.append(i)
-                    h = h_temp
-                    if len(i) < min_len:
-                        min_len = len(i)
-        reducts = [red for red in reducts if len(red) <= min_len]
-        return reducts
+                accuracy = accuracy_score(self.__nn_all.predict(self.__X), self.__nn.predict(temp_X))
+                check = (accuracy >= (1 - self.epsilon))
+               
+                if check:
+                    if len(red) < min_len:
+                        min_len = len(red)
+                        reducts = [red]
+                    elif len(red) == min_len:
+                        reducts.append(red)
+        return np.array(reducts)
     
-    def __find_approx_reducts__(self):
-        total_red = self.attributes
-        np.random.seed(self.random_state)
-        for iter in range(self.n_iters):
-            best_h = 0
-            
-            if self.discrete:
-                grouped_df = self.data.groupby(list(self.attributes))
-                for key, _ in grouped_df:
-                    classes = grouped_df.get_group(key)['target']
-                    ent = self.entropy_function(classes, self.n_classes)
-                    best_h += len(classes)/self.data.shape[0]*ent
-            else:
-                nn = NearestNeighbors(n_neighbors = self.n_neighbors,
-                                      radius = self.radius,
-                                      metric = self.metric)
-                nn.fit(self.data.loc[:,self.attributes])
-                indices = []
-                if self.neighborhood == 'nearest':
-                    _ , indices = nn.kneighbors(self.data.loc[:,self.attributes])
-                elif self.neighborhood == 'delta':
-                    _, indices = nn.radius_neighbors(self.data.loc[:,self.attributes])
-                else:
-                    raise ValueError("%s is not an allowed value for 'neighborhood' parameter" % self.neighborhood)
-                
-                for ind in indices:
-                    x = self.data["target"][ind]
-                    best_h += self.entropy_function(x, self.n_classes)
-                    
-            red = self.attributes
+    def __find_approx_reducts(self):
+        total_red = range(self.__dim)
+
+        for iter in range(self.n_iters):      
+            red = range(self.__dim)
             check = True
             while check == True and len(red) > 1:
                 check = False
@@ -244,36 +162,17 @@ class RoughSetSelector(TransformerMixin, BaseEstimator):
                 combs = itertools.combinations(red, len(red) - 1)
                 combs = np.random.permutation(list(combs))
                 for i in combs:
-                    h_temp = 0
+
+                    temp_red = np.array(list(i))
+                    temp_X = self.__X[:, temp_red].copy()
+                    self.__nn.fit(temp_X, self.__y)
+
+                    accuracy = accuracy_score(self.__nn_all.predict(self.__X), self.__nn.predict(temp_X))
+                    check_acc = (accuracy >= (1 - self.epsilon))
+                
+                    if check_acc:
+                        to_keep = temp_red
                     
-                    if self.discrete:
-                        grouped_df = self.data.groupby(list(i))
-                        for key, _ in grouped_df:
-                            classes = grouped_df.get_group(key)['target']
-                            ent = self.entropy_function(classes, self.n_classes)
-                            h_temp += len(classes)/self.data.shape[0]*ent
-                    else:
-                        nn = NearestNeighbors(n_neighbors = self.n_neighbors,
-                                              radius = self.radius,
-                                              metric = self.metric)
-                        nn.fit(self.data.loc[:,list(i)])
-                                          
-                        indices = []
-                        if self.neighborhood == 'nearest':
-                            _ , indices = nn.kneighbors(self.data.loc[:,i])
-                        elif self.neighborhood == 'delta':
-                            _, indices = nn.radius_neighbors(self.data.loc[:,i])
-                            indices = [list(ind) for ind in indices]
-                        else:
-                            raise ValueError("%s is not an allowed value for 'neighborhood' parameter" % self.neighborhood)
-                        
-                        for ind in indices:
-                            x = self.data["target"][ind]
-                            h_temp += self.entropy_function(x, self.n_classes)
-                    
-                    if h_temp <= best_h - np.log2([1 - self.epsilon]):
-                        to_keep = i
-                        best_h = h_temp
                 if len(to_keep) < len(red):
                     red = to_keep
                     check = True
