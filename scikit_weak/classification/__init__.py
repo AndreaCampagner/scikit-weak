@@ -1,9 +1,8 @@
 from ._ensemble import RRLClassifier
-from ._neighbors import SupersetKNeighborsClassifier
-from ._delin import DELIN
+from ._neighbors import WeaklySupervisedKNeighborsClassifier, WeaklySupervisedRadiusClassifier
 
 __all__ = [
     "RRLClassifier",
-    "SupersetKNeighborsClassifier",
-    "DELIN"
+    "WeaklySupervisedKNeighborsClassifier",
+    "WeaklySupervisedRadiusClassifier"
 ]
