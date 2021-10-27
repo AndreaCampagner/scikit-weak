@@ -69,22 +69,22 @@ class DiscreteWeakLabel(GenericWeakLabel):
 
 class DiscreteFuzzyLabel(DiscreteWeakLabel, FuzzyLabel):
     def __init__(self, classes, n_classes):
-        self.__n_classes = n_classes
+        self.n_classes = n_classes
         if isinstance(classes, np.ndarray) and classes.ndim == 1:
-            if classes.shape[0] > self.__n_classes:
+            if classes.shape[0] > self.n_classes:
                 raise ValueError("Unexpected number of classes")
             self.classes = classes
         elif isinstance(classes, dict):
             self.classes = self.__to_array_encoding(classes)
         elif isinstance(classes, list):
-            self.classes = np.zeros(self.__n_classes)
+            self.classes = np.zeros(self.n_classes)
             for i in classes:
                 self.classes[i] = 1
         else:
             raise ValueError("Format not supported")
 
-    def sample_value(self):
-        probs= np.zeros(self.__n_classes)
+    def to_probs(self):
+        probs= np.zeros(self.n_classes)
         values = np.unique(self.classes)
         sorted_values = np.sort(values)[::-1]
         if sorted_values[-1] != 0.0:
@@ -94,11 +94,14 @@ class DiscreteFuzzyLabel(DiscreteWeakLabel, FuzzyLabel):
             idx = np.where(self.classes >= val)
             assign = (val - sorted_values[j+1])/len(idx[0])
             probs[idx] += assign
+        return probs
 
-        return np.random.choice(range(self.__n_classes), p=probs)
+    def sample_value(self):
+        probs= self.to_probs()
+        return np.random.choice(range(self.n_classes), p=probs)
 
     def __to_array_encoding(self, classes):
-        out = np.zeros(self.__n_classes)
+        out = np.zeros(self.n_classes)
         for i in classes:
           if out[i] > 1:
             raise ValueError("Values greater than 1 are not allowed")
@@ -111,7 +114,7 @@ class DiscreteFuzzyLabel(DiscreteWeakLabel, FuzzyLabel):
     def get_cut(self, alpha):
         if alpha < 0 or alpha > 1:
             raise ValueError("Alpha should be between 0 and 1")
-        return DiscreteSetLabel((self.classes >= alpha) * 1.0, self.__n_classes)
+        return DiscreteSetLabel((self.classes >= alpha) * 1.0, self.n_classes)
 
     def __eq__(self, other):
         if isinstance(other, DiscreteWeakLabel):
