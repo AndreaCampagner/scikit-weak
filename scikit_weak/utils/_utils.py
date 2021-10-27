@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.stats as stats
 
 def to_probs(ys, uniform=False):
     if ys.ndim < 2:
@@ -38,3 +39,40 @@ def prob_format(ys):
     if np.all(( vals >= val_low) & (vals <= val_upp) ):
         return True
     return False
+
+
+def oau_entropy(orthop, n_classes):
+    orthop_copy = np.copy(orthop)
+    probs = np.zeros([n_classes, len(orthop)])
+    i = 0
+    for elem in orthop:
+        for cl in elem:
+            probs[cl, i] = 1.0
+        i += 1
+
+    tots = np.sum(probs, axis=1)
+    indices = np.argsort(tots)[::-1]
+    for i in indices:
+        for j in range(len(orthop)):
+            if i in orthop_copy[j]:
+                orthop_copy[j] = [i]
+    orthop_copy = np.array([t[0] for t in orthop_copy])
+    probs = np.zeros([n_classes])
+    for elem in orthop_copy:
+        probs[elem] += 1.0
+    probs /= sum(probs)
+    return stats.entropy(probs, base=2)
+
+def bet_entropy(orthop, n_classes):
+        probs = np.zeros([n_classes])
+        unif = np.ones([n_classes])
+        for elem in orthop:
+            for cl in elem:
+                probs[cl] += 1.0/len(elem)
+        probs /= sum(probs)
+        unif = unif * (probs > 0)
+        unif /= sum(unif)
+        num =  stats.entropy(probs, base=2)
+        den = stats.entropy(unif, base=2)
+        h = 0 if num == 0 else num/den
+        return h
