@@ -5,6 +5,6 @@ Classification
 .. toctree::
     :maxdepth: 1
     
-    SupersetKNeighborsClassifier
-    DELIN
+    WeaklySupervisedKNeighborsClassifier
+    WeaklySupervisedRadiusClassifier
     RRLClassifier

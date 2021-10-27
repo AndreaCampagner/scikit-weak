@@ -66,7 +66,70 @@ class ArrayPair(FitnessVal):
 
 
 class GeneticRoughSetSelector(TransformerMixin, BaseEstimator):
+    """
+    A class to perform Rough Set-based feature selection, by searching for reducts, using Genetic Algorithms.
+    The y input to the fit method should be given as an iterable of DiscreteWeakLabel.
+    Supports both discrete (using Pawlak Rough Sets) and continuous (using Neighborhood Rough Sets) datasets.
 
+    Parameters
+    ----------
+    :param epsilon: The approximation factor. Should be a number between 0.0 and 1.0 (excluded)
+    :type epsilon: float, default=0.0
+
+    :param method: The method used to compute the fitness. If 'lambda', then the algorithm solves a single objective optimization problem
+        If 'conservative' or 'dominance' solves a multiple objective optimization problem: in particular, if 'conservative' a 2-objectives problem
+        and if 'dominance' (n+1)-objectives problem, where n is the number of instances
+    :type method: {'lambda', 'conservative', 'dominance'}, default='conservative'
+
+    :param discrete: Whether the input X is discrete or not. If discrete=True then use equivalence-based
+        (i.e. Pawlak) Rough Sets. If discrete=False use neighborhood-based Rough Sets.
+    :type discrete: bool, default=True
+        
+    :param l: Lambda interpolation factor. Only used if method='lambda'
+    :type l: float in [0,1], default=0.5
+
+    :param tournament_size: Proportion of population to select from in tournament selection.
+    :type tournament_size: float in [0,1], default=0.1
+
+    :param p_mutate: Proability of point mutation
+    :type p_mutate: float in [0,1], default=0.1
+
+    :param metric: Metric to be used with neighborhood-based Rough Sets. Only used if discrete=False. If discrete=True, then metric="hamming"
+    :type metric: string or function, default='minkowski'
+        
+    :param neighborhood: Type of neighborhood-based Rough Sets to be used. If neighborhood='delta', then
+        use delta-neighborhood Rough Sets: all neigbhors with distance <= radius are selected.
+        If neighborhood='nearest', then use k-nearest-neighbors Rough Sets: only the k
+        nearest neighbors are selected. Only used if discrete=False
+    :type neighborhood: {'delta', 'nearest'}, default='nearest'
+
+    :param n_neighbors: Number of nearest neighbors to select. Only used if discrete=False and
+        neighborhood='nearest'
+    :type n_neighbors: int, default=3
+
+    :param radius: Radius to select neighbors. Only used if discrete=False and neighborhood='delta'
+    :type radius: float, default=1.0
+
+    :param random_state: Randomization seed. Used only if search_strategy='approximate'
+    :type random_state: int, default=None
+
+    :param population_size: Size of the population for the Genetic Algorithm
+    :type population_size: int, default=100
+
+    :param n_iters: Number of generations for the Genetic Algorithm
+    :type n_iters: int, default=100
+
+    Attributes
+    ----------
+    :ivar __n_classes: The number of unique classes in y
+    :vartype n_classes: int
+
+    :ivar __best_features: The unique most fit feature sets.
+    :vartype __best_features: ndarray
+
+    :ivar best_targets: The disambiguated targets corresponing to the most fit feature sets. Can be used for transductive learning or training a downstream model.
+    :vartype __best_target: ndarray
+    """
     def __init__(self, epsilon = 0.0, method = 'conservative',
                  discrete = False, l = 0.5, tournament_size = 0.1, p_mutate=0.1,
                  metric='minkowski', neighborhood='nearest', n_neighbors=3, radius=1.0,
@@ -236,14 +299,16 @@ class GeneticRoughSetSelector(TransformerMixin, BaseEstimator):
         return temp_X.shape[1] if check else np.inf
         
     def fit(self, X, y):
-
+        """
+        Fit the GeneticRoughSetSelector model
+        """
         state = np.random.get_state()
         if not (self.random_state is None):
             np.random.seed(self.random_state)
 
 
         self.X = X
-        self.y = y
+        self.y = np.array(y)
         self.__basic_type = y[0].basic_type()
         self.__dim = X.shape[1]
         self.__n_instances = X.shape[0]
@@ -281,6 +346,9 @@ class GeneticRoughSetSelector(TransformerMixin, BaseEstimator):
         return self
 
     def transform(self, X, y=None):
+        """
+        Transform the data (only X, y is ignored) selecting a reduct at random
+        """
         state = np.random.get_state()
         if not (self.random_state is None):
             np.random.seed(self.random_state)
@@ -293,6 +361,9 @@ class GeneticRoughSetSelector(TransformerMixin, BaseEstimator):
         return X[:, self.__best_features[feature_set]]
 
     def fit_transform(self, X, y):
+        """
+        Fit and then transform data
+        """
         self.fit(X,y)
         return self.transform(X, y)
 

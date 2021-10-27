@@ -5,3 +5,4 @@ Feature Selection
     :maxdepth: 1
     
     RoughSetSelector
+    GeneticRoughSetSelector
