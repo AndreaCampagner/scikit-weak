@@ -1,49 +1,44 @@
 import numpy as np
-from scipy.spatial import KDTree
+from sklearn.neighbors import NearestNeighbors
 from sklearn.base import BaseEstimator, ClassifierMixin
 
-from ..utils import to_probs, prob_format
-
-class SupersetKNeighborsClassifier(BaseEstimator, ClassifierMixin):
+class WeaklySupervisedKNeighborsClassifier(BaseEstimator, ClassifierMixin):
     '''
     A class to perform classification for weakly supervised data, based on k-nearest neighbors.
-    The y input to the fit method should be given as either:
-     - a ndarray of lists
-     - a n*m matrix, where n is the same size as X.shape[0] and m is the number of classes, where each row sums to 1 (prob format)
+    The y input to the fit method should be given as an iterable of DiscreteWeakLabel
 
     Parameters
     ----------
     :param k: The number of neighbors
     :type k: int, default=3
 
+    :param metric: The metric for neighbors queries
+    :type metric: str or callable, default 'minkowski'
+
     Attributes
     ----------
-    :ivar y: If y is in prob format, then target is a copy of y. Otherwise it is y in prob format
+    :ivar y: A copy of the input y
     :vartype y: ndarray
-
-    :ivar tree: A tree object for nearest neighbors queries speed-up
-    :vartype tree: KDTree object
 
     :ivar n_classes: The number of unique classes in y
     :vartype n_classes: int
-
-    :ivar classes_: The unique classes in y
-    :vartype classes: ndarray
     '''
-    def __init__(self, k=3):
+    def __init__(self, k=3, metric='minkowski'):
         self.k = k
+        self.metric = metric
         
     def fit(self, X, y):
         """
-        Fit the SupersetKNeighborsClassifier model
+        Fit the WeaklySupervisedKNeighborsClassifier model
         """
-        self.X = X
-        self.y = y
-        if not prob_format(self.y):
-            self.y = to_probs(y)
-        self.tree = KDTree(X)
-        self.classes_ = np.unique(np.add.reduce(y))
-        self.n_classes = len(self.classes_)
+        self.__X = X
+        self.__y = np.zeros((len(y), y[0].n_classes))
+        for i in range(len(y)):
+            self.__y[i] = y[i].classes
+        
+        self.__tree = NearestNeighbors(metric=self.metric, n_neighbors=self.k)
+        self.__tree.fit(self.__X)
+        self.__n_classes = y[0].n_classes
         return self
 
     
@@ -52,21 +47,85 @@ class SupersetKNeighborsClassifier(BaseEstimator, ClassifierMixin):
         Returns predictions for the given X
         """
         y_pred = np.zeros(X.shape[0])
-        for i in range(X.shape[0]):
-            _, indices = self.tree.query(X[i], self.k)
-            classes = np.zeros(self.y.shape[1])
-            classes += np.add.reduce(self.y[indices])
-            y_pred[i] = np.argmax(classes)
+        _, indices = self.__tree.kneighbors(X)
+        for i in range(len(indices)):
+            y_pred[i] = np.argmax(np.add.reduce(self.__y[indices[i]]))
         return y_pred
     
     def predict_proba(self, X):
         """
         Returns probability distributions for the given X
         """
-        y_pred = np.zeros((X.shape[0], self.y.shape[1]))
-        for i in range(X.shape[0]):
-            _, indices = self.tree.query(X[i], self.k)
-            for j in indices:
-                y_pred[i, :] += self.y[j]
+        y_pred = np.zeros((X.shape[0], self.__n_classes))
+        _, indices = self.__tree.kneighbors(X)
+        for i in range(len(indices)):
+            y_pred[i, :] = np.add.reduce(self.__y[indices[i]])
+            y_pred[i, :] /= np.sum(y_pred[i,:])
+        return y_pred
+
+
+
+
+
+
+
+class WeaklySupervisedRadiusClassifier(BaseEstimator, ClassifierMixin):
+    '''
+    A class to perform classification for weakly supervised data, based on radius neighbors.
+    The y input to the fit method should be given as an iterable of DiscreteWeakLabel
+
+    Parameters
+    ----------
+    :param radius: The size of the radius
+    :type radius: float, default=1.0
+
+    :param metric: The metric for neighbors queries
+    :type metric: str or callable, default 'minkowski'
+
+    Attributes
+    ----------
+    :ivar y: A copy of the input y
+    :vartype y: ndarray
+
+    :ivar n_classes: The number of unique classes in y
+    :vartype n_classes: int
+    '''
+    def __init__(self, radius=1.0, metric='minkowski'):
+        self.radius = radius
+        self.metric = metric
+        
+    def fit(self, X, y):
+        """
+        Fit the WeaklySupervisedRadiusClassifier model
+        """
+        self.__X = X
+        self.__y = np.zeros((len(y), y[0].n_classes))
+        for i in range(len(y)):
+            self.__y[i] = y[i].classes
+        
+        self.__tree = NearestNeighbors(metric=self.metric, radius=self.radius)
+        self.__tree.fit(self.__X)
+        self.__n_classes = y[0].n_classes
+        return self
+
+    
+    def predict(self, X):
+        """
+        Returns predictions for the given X
+        """
+        y_pred = np.zeros(X.shape[0])
+        _, indices = self.__tree.radius_neighbors(X)
+        for i in range(len(indices)):
+            y_pred[i] = np.argmax(np.add.reduce(self.__y[indices[i]]))
+        return y_pred
+    
+    def predict_proba(self, X):
+        """
+        Returns probability distributions for the given X
+        """
+        y_pred = np.zeros((X.shape[0], self.__n_classes))
+        _, indices = self.__tree.radius_neighbors(X)
+        for i in range(len(indices)):
+            y_pred[i, :] = np.add.reduce(self.__y[indices[i]])
             y_pred[i, :] /= np.sum(y_pred[i,:])
         return y_pred
