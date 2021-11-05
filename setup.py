@@ -14,6 +14,9 @@ setup(
        "scikit-learn",
        "pandas",
        "numpy",
-       "scipy"
+       "scipy",
+       "pytest",
+       "keras",
+       "tensorflow"
    ],
 )
