@@ -12,8 +12,10 @@ setup(
    long_description=open('README.md').read(),
    install_requires=[
        "scikit-learn",
-       "pandas",
        "numpy",
-       "scipy"
+       "scipy",
+       "tensorflow",
+       "keras",
+       "pytest"
    ],
 )
