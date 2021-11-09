@@ -5,8 +5,8 @@
  as well as some algorithms available in the literature.
 
  Current contributors:
- Andrea Campagner, MUDI Lab, University of Milano-Bicocca
- Julian Lienen, Paderborn University
+ - Andrea Campagner, MUDI Lab, University of Milano-Bicocca
+ - Julian Lienen, Paderborn University
 
  ## How to install
  You can install the library using the command:
@@ -16,7 +16,7 @@
  ```
  
  ### Dependencies:
- numpy, scipy, scikit-learn, pandas
+ numpy, scipy, scikit-learn, tensorflow, keras, pytest
 
  ## Documentation
  The documentation is generated using Sphinx (https://www.sphinx-doc.org/). 
