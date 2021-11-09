@@ -17,11 +17,18 @@ def dataset():
         y_soft[i] = DiscreteFuzzyLabel(y_fuzzy[i], 3)
     return (X, y, y_soft)
 
+def test_simple(dataset):
+    rss = GeneticRoughSetSelector(n_iters=10, epsilon=0.1, random_state=0)
+    X, y = dataset[0], dataset[2]
+    rss.fit(X,y)
+    rss.transform(X)
+    assert True
+
 def test_random_state(dataset):
     rss = GeneticRoughSetSelector(n_iters=10, epsilon=0.1, random_state=0)
     X, y = dataset[0], dataset[2]
-    res1 = rss.fit(X,y)._population_features[0]
-    res2 = rss.fit(X,y)._population_features[0]
+    res1 = rss.fit(X,y).best_features_[0]
+    res2 = rss.fit(X,y).best_features_[0]
     assert np.array_equal(res1, res2) 
 
 def test_transform(dataset):

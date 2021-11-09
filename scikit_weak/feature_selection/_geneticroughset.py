@@ -121,14 +121,14 @@ class GeneticRoughSetSelector(TransformerMixin, BaseEstimator):
 
     Attributes
     ----------
-    :ivar __n_classes: The number of unique classes in y
-    :vartype n_classes: int
+    :ivar n_classes: The number of unique classes in y
+    :vartype n_classes_: int
 
-    :ivar __best_features: The unique most fit feature sets.
-    :vartype __best_features: ndarray
+    :ivar best_features_: The unique most fit feature sets.
+    :vartype best_features_: ndarray
 
-    :ivar best_targets: The disambiguated targets corresponing to the most fit feature sets. Can be used for transductive learning or training a downstream model.
-    :vartype __best_target: ndarray
+    :ivar best_targets_: The disambiguated targets corresponing to the most fit feature sets. Can be used for transductive learning or training a downstream model.
+    :vartype best_target_: ndarray
     """
     def __init__(self, epsilon = 0.0, method = 'conservative',
                  discrete = False, l = 0.5, tournament_size = 0.1, p_mutate=0.1,
@@ -149,17 +149,17 @@ class GeneticRoughSetSelector(TransformerMixin, BaseEstimator):
         self.p_mutate = p_mutate
 
     def _initialize(self):
-        self._population_features = np.random.choice(a=[False, True], size=(self.population_size, self.__dim))
-        self._population_targets = np.empty((self.population_size, self.__n_instances), dtype=self.__basic_type)
+        self.__population_features = np.random.choice(a=[False, True], size=(self.population_size, self.__dim))
+        self.__population_targets = np.empty((self.population_size, self.__n_instances), dtype=self.__basic_type)
         self._true_targets = np.empty((self.population_size, self.__n_instances), dtype=object)
         for i in range(self.population_size):
-            self._population_targets[i, :] = [self.y[j].sample_value() for j in range(self.__n_instances)]
+            self.__population_targets[i, :] = [self.y[j].sample_value() for j in range(self.__n_instances)]
             self._true_targets[i, :] = self.y
 
     def __breed(self):
         i = 0
-        features_temp = self._population_features.copy()
-        targets_temp = self._population_targets.copy()
+        features_temp = self.__population_features.copy()
+        targets_temp = self.__population_targets.copy()
         true_targets_temp = self._true_targets.copy()
         for c in range(int(self.population_size/2)):
             parent_1 = self.__select()
@@ -180,8 +180,8 @@ class GeneticRoughSetSelector(TransformerMixin, BaseEstimator):
 
             i+=2
 
-        self._population_features = features_temp
-        self._population_targets = targets_temp
+        self.__population_features = features_temp
+        self.__population_targets = targets_temp
         self._true_targets = true_targets_temp
 
     def __select(self):
@@ -219,17 +219,17 @@ class GeneticRoughSetSelector(TransformerMixin, BaseEstimator):
         features_split_ind = np.random.choice(self.__dim)
         target_split_ind = np.random.choice(self.__n_instances)
 
-        child_1_features = self._population_features[a].copy()
-        child_1_features[features_split_ind:] = self._population_features[b, features_split_ind:]
-        child_1_targets = self._population_targets[a].copy()
-        child_1_targets[target_split_ind:] = self._population_targets[b, target_split_ind:]
+        child_1_features = self.__population_features[a].copy()
+        child_1_features[features_split_ind:] = self.__population_features[b, features_split_ind:]
+        child_1_targets = self.__population_targets[a].copy()
+        child_1_targets[target_split_ind:] = self.__population_targets[b, target_split_ind:]
         child_1_true_targets = self._true_targets[a].copy()
         child_1_true_targets[target_split_ind:] = self._true_targets[b, target_split_ind:]
 
-        child_2_features = self._population_features[b].copy()
-        child_2_features[features_split_ind:] = self._population_features[a, features_split_ind:]
-        child_2_targets = self._population_targets[b].copy()
-        child_2_targets[target_split_ind:] = self._population_targets[a, target_split_ind:]
+        child_2_features = self.__population_features[b].copy()
+        child_2_features[features_split_ind:] = self.__population_features[a, features_split_ind:]
+        child_2_targets = self.__population_targets[b].copy()
+        child_2_targets[target_split_ind:] = self.__population_targets[a, target_split_ind:]
         child_2_true_targets = self._true_targets[b].copy()
         child_2_true_targets[target_split_ind:] = self._true_targets[a, target_split_ind:]
 
@@ -239,10 +239,10 @@ class GeneticRoughSetSelector(TransformerMixin, BaseEstimator):
                 
 
     def __compute_fitness(self, p):
-        features = self._population_features[p,:]
+        features = self.__population_features[p,:]
         
         temp_X = self.X[:, features]
-        temp_y = self._population_targets[p]
+        temp_y = self.__population_targets[p]
 
         reduct_val = self.__evaluate_reduct(temp_X, temp_y)
         poss_val = self.__evaluate_poss(temp_y)
@@ -312,36 +312,37 @@ class GeneticRoughSetSelector(TransformerMixin, BaseEstimator):
         self.__basic_type = y[0].basic_type()
         self.__dim = X.shape[1]
         self.__n_instances = X.shape[0]
+        self.n_classes_ = y[0].n_classes
         self._initialize()
 
         self.__fitnesses = np.empty(self.population_size, dtype=FitnessVal)
         for i in range(self.n_iters):
             self.__best_value = self.__compute_fitness(0)
             self.__fitnesses[0] = self.__best_value
-            self.__best_features = [self._population_features[0,:]]
-            self.__best_targets = [self._population_targets[0]]
+            self.best_features_ = [self.__population_features[0,:]]
+            self.best_targets_ = [self.__population_targets[0]]
 
             
             for p in range(1,self.population_size):
                 self.__fitnesses[p] = self.__compute_fitness(p)
                 if self.__fitnesses[p] == self.__best_value:
-                    self.__best_features.append(self._population_features[p,:])
-                    self.__best_targets.append(self._population_targets[p])
+                    self.best_features_.append(self.__population_features[p,:])
+                    self.best_targets_.append(self.__population_targets[p])
                 elif self.__fitnesses[p] > self.__best_value:
                     self.__best_value = self.__fitnesses[p]
-                    self.__best_features = [self._population_features[p,:]]
-                    self.__best_targets = [self._population_targets[p]]
+                    self.best_features_ = [self.__population_features[p,:]]
+                    self.best_targets_ = [self.__population_targets[p]]
 
             self.__breed()
 
         if not (self.random_state is None):
             np.random.set_state(state)
 
-        self.__best_features = np.array(self.__best_features)
-        self.__best_targets = np.array(self.__best_targets)
-        _, idx = np.unique(self.__best_features, axis=0, return_index=True)
-        self.__best_features = self.__best_features[idx]
-        self.__best_targets = self.__best_targets[idx]
+        self.best_features_ = np.array(self.best_features_)
+        self.best_targets_ = np.array(self.best_targets_)
+        _, idx = np.unique(self.best_features_, axis=0, return_index=True)
+        self.best_features_ = self.best_features_[idx]
+        self.best_targets_ = self.best_targets_[idx]
 
         return self
 
@@ -353,12 +354,12 @@ class GeneticRoughSetSelector(TransformerMixin, BaseEstimator):
         if not (self.random_state is None):
             np.random.seed(self.random_state)
             
-        feature_set = np.random.choice(len(self.__best_features))
+        feature_set = np.random.choice(len(self.best_features_))
 
         if not (self.random_state is None):
             np.random.set_state(state)
 
-        return X[:, self.__best_features[feature_set]]
+        return X[:, self.best_features_[feature_set]]
 
     def fit_transform(self, X, y):
         """
