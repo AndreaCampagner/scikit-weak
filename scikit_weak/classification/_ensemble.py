@@ -3,7 +3,6 @@ from sklearn.tree import ExtraTreeClassifier
 from sklearn.preprocessing import normalize
 from sklearn.utils import resample
 import numpy as np
-from ..utils import to_probs, prob_format
 
 class RRLClassifier(BaseEstimator, ClassifierMixin):
   '''
