@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
    name='scikit-weak',
-   version='0.1.5a6',
+   version='0.1.5',
    author='Andrea Campagner',
    author_email='a.campagner@campus.unimib.it',
    packages=find_packages(include=['scikit_weak', 'scikit_weak.*']),
@@ -12,11 +12,10 @@ setup(
    long_description=open('README.md').read(),
    install_requires=[
        "scikit-learn",
-       "pandas",
        "numpy",
        "scipy",
-       "pytest",
+       "tensorflow",
        "keras",
-       "tensorflow"
+       "pytest"
    ],
 )

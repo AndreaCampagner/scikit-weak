@@ -1,6 +1,9 @@
-from ._utils import to_probs, prob_format
+from ._utils import bet_entropy, oau_entropy
+from ._smoothers import DiscreteEstimatorSmoother, DiscreteRandomSmoother
 
 __all__ = [
-    'to_probs',
-    'prob_format'
+    'bet_entropy',
+    'oau_entropy',
+    'DiscreteEstimatorSmoother',
+    'DiscreteRandomSmoother'
 ]
