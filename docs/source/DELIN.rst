@@ -1,5 +1,5 @@
 DELIN
-============================
+=====
 
 .. autoclass:: scikit_weak.feature_selection.DELIN
     :members:

@@ -6,12 +6,19 @@
 Welcome to scikit-weak's documentation!
 =======================================
 
+Welcome
+-------
+Welcome to the documentation of scikit-weak, a library for dealing with weakly supervised learning.
+
+Table of Contents
+-----------------
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 3
+   :titlesonly:
 
    classification
    feature_selection
+   utils
 
 
 
