@@ -1,5 +1,5 @@
-RoughSetSelector
-================
+GeneticRoughSetSelector
+=======================
 
 .. autoclass:: scikit_weak.feature_selection.GeneticRoughSetSelector
     :members:

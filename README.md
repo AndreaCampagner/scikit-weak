@@ -22,6 +22,7 @@
  The documentation is generated using Sphinx (https://www.sphinx-doc.org/). 
  If you download the source code from this repository you can generate the documentation in html format by typing: 
  ```
+ pip install sphinx-rtd-theme
  sphinx-build -b html docs/source docs/build/html
  ```
  in the main folder of the project.

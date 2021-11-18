@@ -3,6 +3,8 @@ Feature Selection
 
 .. toctree::
     :maxdepth: 1
+    :titlesonly:
     
-    RoughSetSelector
+    DELIN
     GeneticRoughSetSelector
+    RoughSetSelector
