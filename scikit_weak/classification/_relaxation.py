@@ -1,11 +1,11 @@
 from sklearn.base import BaseEstimator, ClassifierMixin
-from keras.wrappers.scikit_learn import KerasClassifier
-from keras.models import Sequential
-from keras.layers import Input, Dense
-from keras.regularizers import l2
-from keras.losses import kullback_leibler_divergence
-import keras.backend as keras_backend
 import tensorflow as tf
+from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Input, Dense
+from tensorflow.keras.regularizers import l2
+from tensorflow.keras.losses import kullback_leibler_divergence
+import tensorflow.keras.backend as keras_backend
 from tensorflow.keras.optimizers import SGD
 from sklearn.preprocessing import OneHotEncoder
 
