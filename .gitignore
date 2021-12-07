@@ -4,3 +4,4 @@ dist/*
 scikit_weak.egg-info/*
 examples/.ipynb_checkpoints/*
 examples/Untitled.ipynb
+install_script.txt
