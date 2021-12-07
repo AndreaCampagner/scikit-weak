@@ -7,7 +7,8 @@ from sklearn.base import BaseEstimator, ClassifierMixin, TransformerMixin
 class DELIN(BaseEstimator, TransformerMixin, ClassifierMixin):
     '''
     A class to perform classification and dimensionality reduction for weakly supervised data,
-    based on the DELIN algorithm [1].
+    based on the DELIN algorithm [1]. The original method has been slighlty modified by using
+    SVD in the computation of the inverse, so as to avoid issues when the data matrix is singular.
     The y input to the fit method should be given as an iterable of DiscreteWeakLabel
 
     Parameters
@@ -15,8 +16,9 @@ class DELIN(BaseEstimator, TransformerMixin, ClassifierMixin):
     :param k: The number of neighbors
     :type k: int, default=3
     
-    :param d: The number of dimensions to be kept after reduction
-    :type d: int, default = 2
+    :param d: The number of dimensions to be kept after reduction. If int, then the exact number of features to be kept.
+    If float, the percentage of the total number of dimensions.
+    :type d: int or float, default = 2
         
     :param iters: The number of iterations to be performed
     :type iters: int, default = 10
@@ -53,6 +55,9 @@ class DELIN(BaseEstimator, TransformerMixin, ClassifierMixin):
         
         self.__clf = WeaklySupervisedKNeighborsClassifier(k=self.k)
         self.__n_classes = self.__y[0].n_classes
+
+        if type(self.d) == float:
+            self.d = int(self.d*X.shape[1])
         
         self.__y_probs = np.empty((self.__X.shape[0], self.__n_classes))
 
@@ -72,10 +77,10 @@ class DELIN(BaseEstimator, TransformerMixin, ClassifierMixin):
             C = np.zeros((self.__n_classes, self.__n_classes))
             for i in range(self.__n_classes):
                 C[i,i] = np.sum(self.__y_probs[:,i])
-            S_b = X_hat.T.dot(self.__y_prime).dot(np.linalg.inv(C)).dot(self.__y_prime.T).dot(X_hat)
+            S_b = X_hat.T.dot(self.__y_prime).dot(np.linalg.pinv(C)).dot(self.__y_prime.T).dot(X_hat)
             S_w = S_t - S_b
 
-            Mat = np.linalg.inv(S_w).dot(S_b)
+            Mat = np.linalg.pinv(S_w).dot(S_b)
             _, self.__vr= eigh(Mat)
             
             X_prime = self.__X.dot(self.__vr[:,-self.d:])
