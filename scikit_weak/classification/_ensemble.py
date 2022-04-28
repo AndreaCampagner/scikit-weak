@@ -29,17 +29,17 @@ class RRLClassifier(BaseEstimator, ClassifierMixin):
     :ivar classifiers: The collection of fitted estimators
     :vartype classifiers: list of estimators
 
-    :ivar ys: The collection of sampled target labels. Each ndarray in ys has the same shape as y
-    :vartype ys: list of ndarrays
+    :ivar __ys: The collection of sampled target labels. Each ndarray in ys has the same shape as y
+    :vartype __ys: list of ndarrays
     
-    :ivar Xs: The collection of bootstrapped datasets. Each ndarray in Xs has the same shape as X. If resample=False, then Xs is empty.
-    :vartype Xs: list of ndarrays
+    :ivar __Xs: The collection of bootstrapped datasets. Each ndarray in Xs has the same shape as X. If resample=False, then Xs is empty.
+    :vartype __Xs: list of ndarrays
     
-    :ivar n_classes: The number of unique classes in y
-    :vartype n_classes: int
+    :ivar __n_classes: The number of unique classes in y
+    :vartype __n_classes: int
 
-    :ivar classes: The unique classes in y
-    :vartype n_classes: list of int
+    :ivar __classes: The unique classes in y
+    :vartype __classes: list of int
     '''
   def __init__(self, estimator=ExtraTreeClassifier(), n_estimators=100, resample=False, random_state=None):
     self.n_estimators = n_estimators
