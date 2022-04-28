@@ -17,11 +17,11 @@ class WeaklySupervisedKNeighborsClassifier(BaseEstimator, ClassifierMixin):
 
     Attributes
     ----------
-    :ivar y: A copy of the input y
-    :vartype y: ndarray
+    :ivar __n_classes: The number of unique classes in y
+    :vartype __n_classes: int
 
-    :ivar n_classes: The number of unique classes in y
-    :vartype n_classes: int
+    :ivar __classes: The unique classes in y
+    :vartype __classes: list of int
     '''
     def __init__(self, k=3, metric='minkowski'):
         self.k = k
@@ -35,10 +35,12 @@ class WeaklySupervisedKNeighborsClassifier(BaseEstimator, ClassifierMixin):
         self.__y = np.zeros((len(y), y[0].n_classes))
         for i in range(len(y)):
             self.__y[i] = y[i].classes
+
+        self.__n_classes = self.__y[0].n_classes
+        self.__classes = range(self.__n_classes)
         
         self.__tree = NearestNeighbors(metric=self.metric, n_neighbors=self.k)
         self.__tree.fit(self.__X)
-        self.__n_classes = y[0].n_classes
         return self
 
     
