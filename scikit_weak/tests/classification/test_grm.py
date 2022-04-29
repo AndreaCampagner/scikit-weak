@@ -20,7 +20,7 @@ def dataset():
 
 def test_grm_linear(dataset):
     X, y_true, y = dataset[0], dataset[1], dataset[2]
-    clf = GRMLinearClassifier()
+    clf = GRMLinearClassifier(max_epochs=1)
     clf.fit(X, y)
     y_pred = clf.predict(X)
     assert True
