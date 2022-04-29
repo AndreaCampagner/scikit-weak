@@ -36,7 +36,7 @@ class WeaklySupervisedKNeighborsClassifier(BaseEstimator, ClassifierMixin):
         for i in range(len(y)):
             self.__y[i] = y[i].classes
 
-        self.__n_classes = self.__y[0].n_classes
+        self.__n_classes = y[0].n_classes
         self.__classes = range(self.__n_classes)
         
         self.__tree = NearestNeighbors(metric=self.metric, n_neighbors=self.k)
