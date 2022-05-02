@@ -9,3 +9,4 @@ Classification
     WeaklySupervisedRadiusClassifier
     RRLClassifier
     GRMLinearClassifier
+    PseudoLabelsClassifier
