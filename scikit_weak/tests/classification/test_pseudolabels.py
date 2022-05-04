@@ -2,6 +2,8 @@ import pytest
 import numpy as np
 from ...classification import PseudoLabelsClassifier
 from sklearn.datasets import load_iris
+
+from ...classification._pseudolabels import CSSLClassifier
 from ...data_representation import *
 
 from sklearn.neighbors import KNeighborsClassifier
@@ -21,6 +23,19 @@ def dataset():
 def test_grm_linear(dataset):
     X, y_true, y = dataset[0], dataset[1], dataset[2]
     clf = PseudoLabelsClassifier()
+    clf.fit(X, y)
+    y_pred = clf.predict(X)
+    assert True
+
+def test_cssl(dataset):
+    X, y_true, y = dataset[0], dataset[1], dataset[2]
+
+    # Make some instances agnostic
+    for idx, label in enumerate(y):
+        if np.random.random() < 0.3:
+            label.classes = np.ones_like(label.classes)
+
+    clf = CSSLClassifier(n_classes=3)
     clf.fit(X, y)
     y_pred = clf.predict(X)
     assert True
