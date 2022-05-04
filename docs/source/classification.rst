@@ -8,3 +8,5 @@ Classification
     WeaklySupervisedKNeighborsClassifier
     WeaklySupervisedRadiusClassifier
     RRLClassifier
+    GRMLinearClassifier
+    PseudoLabelsClassifier

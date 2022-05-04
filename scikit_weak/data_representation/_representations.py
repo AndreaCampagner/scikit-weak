@@ -66,6 +66,10 @@ class IntervalLabel(IntervalFuzzyLabel):
 class DiscreteWeakLabel(GenericWeakLabel):
     def basic_type(self):
         return np.int32
+    
+    @abstractmethod
+    def to_probs(self):
+        pass
 
 class DiscreteFuzzyLabel(DiscreteWeakLabel, FuzzyLabel):
     def __init__(self, classes, n_classes):
@@ -124,6 +128,9 @@ class DiscreteFuzzyLabel(DiscreteWeakLabel, FuzzyLabel):
 
     def __str__(self):
         return str(self.classes)
+
+    def is_agnostic(self):
+        return np.all(np.equal(self.classes, np.ones_like(self.classes)))
 
 
 class DiscreteSetLabel(DiscreteFuzzyLabel):
