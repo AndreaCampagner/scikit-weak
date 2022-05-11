@@ -3,28 +3,37 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to scikit-weak's documentation!
-=======================================
+Homepage
+========
+
+.. figure::  ../../images/scikit_weak_logo.png
+   :scale: 10%
 
 Welcome
 -------
-Welcome to the documentation of scikit-weak, a library for dealing with weakly supervised learning.
+Welcome to the documentation of scikit-weak, a library for weakly supervised learning inspired by scikit-learn.
+
+
+scikit-weak can be installed via:
+
+``pip install scikit-weak``
+
+Alternatively, you can download the source from:
+
+`GitHub <https://github.com/AndreaCampagner/scikit-weak>`_
 
 Table of Contents
 -----------------
+
 .. toctree::
-   :maxdepth: 3
+   :hidden:
+
+   self
+
+.. toctree::
+   :maxdepth: 1
    :titlesonly:
 
-   classification
-   feature_selection
-   utils
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   classification/classification
+   feature_selection/feature_selection
+   utils/utils
