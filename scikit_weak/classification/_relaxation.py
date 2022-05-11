@@ -1,12 +1,17 @@
+from functools import partial
+
+import numpy as np
+from keras.optimizer_v2.gradient_descent import SGD
 from sklearn.base import BaseEstimator, ClassifierMixin
 import tensorflow as tf
-from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Input, Dense
-from tensorflow.keras.regularizers import l2
-from tensorflow.keras.losses import kullback_leibler_divergence
-import tensorflow.keras.backend as keras_backend
-from tensorflow.keras.optimizers import SGD
+# from tensorflow.keras.wrappers.scikit_learn import KerasClassifier, BaseWrapper
+from keras.metrics import accuracy
+from keras.wrappers.scikit_learn import BaseWrapper
+from keras.models import Sequential
+from keras.layers import Input, Dense
+from keras.regularizers import l2
+from keras.losses import kullback_leibler_divergence
+import keras.backend as keras_backend
 from sklearn.preprocessing import OneHotEncoder
 
 
@@ -27,19 +32,36 @@ class LabelRelaxationLoss(object):
         self._alpha = alpha
 
     def loss(self, y_true, y_pred):
+        if self._alpha is None:
+            y_true, alphas = y_true
+        else:
+            alphas = self._alpha
+
         y_pred = y_pred / tf.reduce_sum(y_pred, axis=-1, keepdims=True)
         y_pred = tf.clip_by_value(y_pred, keras_backend.epsilon(), 1. - keras_backend.epsilon())
 
         sum_y_hat_prime = tf.reduce_sum((1. - y_true) * y_pred, axis=-1)
-        y_pred_hat = self._alpha * y_pred / (tf.expand_dims(sum_y_hat_prime, axis=-1) + keras_backend.epsilon())
-        y_true_credal = tf.where(tf.greater(y_true, 0.1), 1. - self._alpha, y_pred_hat)
+        y_pred_hat = alphas * y_pred / (tf.expand_dims(sum_y_hat_prime, axis=-1) + keras_backend.epsilon())
+        y_true_credal = tf.where(tf.greater(y_true, 0.1), 1. - alphas, y_pred_hat)
 
         divergence = kullback_leibler_divergence(y_true_credal, y_pred)
 
         preds = tf.reduce_sum(y_pred * y_true, axis=-1)
 
-        return tf.where(tf.greater_equal(preds, 1. - self._alpha), tf.zeros_like(divergence),
+        return tf.where(tf.greater_equal(preds, 1. - alphas), tf.zeros_like(divergence),
                         divergence)
+
+
+def accuracy_metric(y_true, y_pred, tuple_target=False, n_classes=10):
+    if tuple_target:
+        targets = tf.reshape(y_true[0], (-1, n_classes))
+    else:
+        targets = y_true
+
+    # Argmax as we face probability distributions
+    y_pred = tf.argmax(y_pred, axis=-1)
+    targets = tf.argmax(targets, axis=-1)
+    return accuracy(targets, y_pred)
 
 
 class LabelRelaxationNNClassifier(BaseEstimator, ClassifierMixin):
@@ -71,11 +93,18 @@ class LabelRelaxationNNClassifier(BaseEstimator, ClassifierMixin):
 
     :param batch_size: Batch size for training
     :type batch_size: int, default=None
+
+    :param provide_alphas: Indicator whether we consider tuples as targets consisting of the classes and their
+        imprecisiation
+    :type provide_alphas: bool, default=False
+
+    :param n_classes: Number of classes in case we want to be certain about the dimensionality of the one-hot encoding
+    :type n_classes: int default=None
     """
 
     def __init__(self, lr_alpha: float = 0.1, hidden_layer_sizes: tuple = (100,), activation: str = "relu",
                  l2_penalty: float = 1e-4, learning_rate: float = 1e-3, momentum: float = 0.0, epochs: int = 100,
-                 batch_size: int = None):
+                 batch_size: int = None, provide_alphas: bool = False, n_classes: int = None):
         super().__init__()
 
         self._lr_loss = LabelRelaxationLoss(lr_alpha)
@@ -86,8 +115,21 @@ class LabelRelaxationNNClassifier(BaseEstimator, ClassifierMixin):
         self._momentum = momentum
         self._epochs = epochs
         self._batch_size = batch_size
+        self.n_classes = n_classes
 
         self._internal_model = None
+
+        self.provide_alphas = provide_alphas
+
+    def _one_hot_encoding(self, targets):
+        if self.n_classes is None:
+            enc = OneHotEncoder(sparse=False)
+            return enc.fit_transform(targets.reshape(-1, 1))
+        else:
+            # targets = np.take(np.eye(self.n_classes), targets, axis=0)
+            one_hot_encoded = np.zeros((len(targets), self.n_classes))
+            one_hot_encoded[np.arange(len(targets)), targets] = 1
+            return one_hot_encoded
 
     def fit(self, X, y):
         """
@@ -95,10 +137,14 @@ class LabelRelaxationNNClassifier(BaseEstimator, ClassifierMixin):
         """
         input_dim = X.shape[1]
 
-        if len(y.shape) < 2:
-            enc = OneHotEncoder(sparse=False)
-            y = enc.fit_transform(y.reshape(-1, 1))
-        n_classes = y.shape[1]
+        targets = y if not self.provide_alphas else y[0]
+        if len(targets.shape) < 2:
+            targets = self._one_hot_encoding(targets)
+        self.n_classes = targets.shape[1]
+        if self.provide_alphas:
+            y = (targets, y[1])
+        else:
+            y = targets
 
         def _create_model():
             model = Sequential()
@@ -106,23 +152,24 @@ class LabelRelaxationNNClassifier(BaseEstimator, ClassifierMixin):
             for hl_size in self._hidden_layer_sizes:
                 model.add(
                     Dense(hl_size, activation=self._hidden_layer_activation, kernel_regularizer=l2(self._l2_penalty)))
-            model.add(Dense(n_classes, activation="softmax", kernel_regularizer=l2(self._l2_penalty)))
+            model.add(Dense(self.n_classes, activation="softmax", kernel_regularizer=l2(self._l2_penalty)))
 
             optimizer = SGD(lr=self._learning_rate, momentum=self._momentum)
+            acc_metric = partial(accuracy_metric, tuple_target=self.provide_alphas, n_classes=self.n_classes)
+            acc_metric.__name__ = "accuracy"
             model.compile(loss=self._lr_loss.loss, optimizer=optimizer,
-                          metrics=["accuracy"])
+                          metrics=[acc_metric])
             return model
 
-        self._internal_model = KerasClassifier(build_fn=_create_model, epochs=self._epochs, batch_size=self._batch_size)
+        self._internal_model = BaseWrapper(build_fn=_create_model, epochs=self._epochs, batch_size=self._batch_size)
         self._internal_model.fit(X, y)
         return self
 
     def predict(self, X):
         assert self._internal_model is not None, "Model needs to be fit before prediction."
 
-        return self._internal_model.predict(X)
+        return self._internal_model.model.predict(X)
 
     def predict_proba(self, X):
-        assert self._internal_model is not None, "Model needs to be fit before prediction."
-
-        return self._internal_model.predict_proba(X)
+        # As last layer is a softmax layer
+        return self.predict(X)

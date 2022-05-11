@@ -129,6 +129,9 @@ class DiscreteFuzzyLabel(DiscreteWeakLabel, FuzzyLabel):
     def __str__(self):
         return str(self.classes)
 
+    def is_agnostic(self):
+        return np.all(np.equal(self.classes, np.ones_like(self.classes)))
+
 
 class DiscreteSetLabel(DiscreteFuzzyLabel):
 
