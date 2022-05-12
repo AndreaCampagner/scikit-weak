@@ -1,4 +1,7 @@
 # scikit-weak (scikit-weakly-supervised)
+
+![scikit-weak logo](images/scikit_weak_logo.png)
+
  A package featuring utilities and algorithms for weakly supervised ML.
  Should be (more-or-less) compatible with scikit-learn!
  It collects original algorithms and methods developed by the contributors,
