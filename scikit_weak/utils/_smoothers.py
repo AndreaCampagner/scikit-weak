@@ -70,10 +70,10 @@ class DiscreteRandomSmoother(TransformerMixin, BaseEstimator):
     :type p_incl: float, default=1.0
 
     :param prob_ranges: Array of possible membership degrees to be sampled. If not None, overrides both p_err and p_incl
-    :type p_err: enumerable of float, default=None
+    :type prob_ranges: enumerable of float, default=None
 
     :param type: Type of weakly supervised labels to transform into
-    :type n_estimators: {'set', 'fuzzy'}, default=set
+    :type type: {'set', 'fuzzy'}, default=set
 
     :param samples: Number of samples to be generated
     :type samples: int, default=100
