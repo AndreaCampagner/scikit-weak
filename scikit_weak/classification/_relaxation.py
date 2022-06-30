@@ -1,10 +1,8 @@
 from functools import partial
-
 import numpy as np
-from keras.optimizer_v2.gradient_descent import SGD
+from keras.optimizers import SGD
 from sklearn.base import BaseEstimator, ClassifierMixin
 import tensorflow as tf
-# from tensorflow.keras.wrappers.scikit_learn import KerasClassifier, BaseWrapper
 from keras.metrics import accuracy
 from keras.wrappers.scikit_learn import BaseWrapper
 from keras.models import Sequential
@@ -126,7 +124,6 @@ class LabelRelaxationNNClassifier(BaseEstimator, ClassifierMixin):
             enc = OneHotEncoder(sparse=False)
             return enc.fit_transform(targets.reshape(-1, 1))
         else:
-            # targets = np.take(np.eye(self.n_classes), targets, axis=0)
             one_hot_encoded = np.zeros((len(targets), self.n_classes))
             one_hot_encoded[np.arange(len(targets)), targets] = 1
             return one_hot_encoded
