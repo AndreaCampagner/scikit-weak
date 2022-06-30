@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
    name='scikit-weak',
-   version='0.2.1',
+   version='0.2.2',
    author='Andrea Campagner',
    python_requires=">3.8.0",
    author_email='a.campagner@campus.unimib.it',
