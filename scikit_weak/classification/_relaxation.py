@@ -105,14 +105,15 @@ class LabelRelaxationNNClassifier(BaseEstimator, ClassifierMixin):
                  batch_size: int = None, provide_alphas: bool = False, n_classes: int = None):
         super().__init__()
 
-        self._lr_loss = LabelRelaxationLoss(lr_alpha)
-        self._hidden_layer_sizes = hidden_layer_sizes
-        self._hidden_layer_activation = activation
-        self._l2_penalty = l2_penalty
-        self._learning_rate = learning_rate
-        self._momentum = momentum
-        self._epochs = epochs
-        self._batch_size = batch_size
+        self.lr_alpha = lr_alpha
+        self._lr_loss = LabelRelaxationLoss(self.lr_alpha)
+        self.hidden_layer_sizes = hidden_layer_sizes
+        self.activation = activation
+        self.l2_penalty = l2_penalty
+        self.learning_rate = learning_rate
+        self.momentum = momentum
+        self.epochs = epochs
+        self.batch_size = batch_size
         self.n_classes = n_classes
 
         self._internal_model = None
@@ -146,19 +147,19 @@ class LabelRelaxationNNClassifier(BaseEstimator, ClassifierMixin):
         def _create_model():
             model = Sequential()
             model.add(Input(input_dim))
-            for hl_size in self._hidden_layer_sizes:
+            for hl_size in self.hidden_layer_sizes:
                 model.add(
-                    Dense(hl_size, activation=self._hidden_layer_activation, kernel_regularizer=l2(self._l2_penalty)))
-            model.add(Dense(self.n_classes, activation="softmax", kernel_regularizer=l2(self._l2_penalty)))
+                    Dense(hl_size, activation=self.activation, kernel_regularizer=l2(self.l2_penalty)))
+            model.add(Dense(self.n_classes, activation="softmax", kernel_regularizer=l2(self.l2_penalty)))
 
-            optimizer = SGD(lr=self._learning_rate, momentum=self._momentum)
+            optimizer = SGD(lr=self.learning_rate, momentum=self.momentum)
             acc_metric = partial(accuracy_metric, tuple_target=self.provide_alphas, n_classes=self.n_classes)
             acc_metric.__name__ = "accuracy"
             model.compile(loss=self._lr_loss.loss, optimizer=optimizer,
                           metrics=[acc_metric])
             return model
 
-        self._internal_model = BaseWrapper(build_fn=_create_model, epochs=self._epochs, batch_size=self._batch_size)
+        self._internal_model = BaseWrapper(build_fn=_create_model, epochs=self.epochs, batch_size=self.batch_size)
         self._internal_model.fit(X, y)
         return self
 
