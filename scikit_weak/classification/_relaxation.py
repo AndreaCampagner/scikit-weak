@@ -115,6 +115,8 @@ class LabelRelaxationNNClassifier(BaseEstimator, ClassifierMixin):
         self.epochs = epochs
         self.batch_size = batch_size
         self.n_classes = n_classes
+        if self.n_classes is not None:
+            self.classes_ = np.arange(int(self.n_classes))
 
         self._internal_model = None
 
@@ -138,7 +140,12 @@ class LabelRelaxationNNClassifier(BaseEstimator, ClassifierMixin):
         targets = y if not self.provide_alphas else y[0]
         if len(targets.shape) < 2:
             targets = self._one_hot_encoding(targets)
-        self.n_classes = targets.shape[1]
+
+        if self.n_classes is None:
+            self.n_classes = targets.shape[1]
+        if self.classes_ is None:
+            self.classes_ = np.arange(int(self.n_classes))
+
         if self.provide_alphas:
             y = (targets, y[1])
         else:
