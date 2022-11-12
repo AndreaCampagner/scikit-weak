@@ -3,6 +3,7 @@ from ._neighbors import WeaklySupervisedKNeighborsClassifier, WeaklySupervisedRa
 from ._grm import GRMLinearClassifier
 from ._pseudolabels import PseudoLabelsClassifier, CSSLClassifier
 from ._relaxation import LabelRelaxationNNClassifier
+from .imprecise_data import *
 
 __all__ = [
     "RRLClassifier",

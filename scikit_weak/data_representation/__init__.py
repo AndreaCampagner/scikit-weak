@@ -1,5 +1,6 @@
 from ._representations import (GenericWeakLabel, ContinuousWeakLabel, DiscreteWeakLabel, FuzzyLabel,
-                              DiscreteFuzzyLabel, DiscreteSetLabel, IntervalFuzzyLabel, IntervalLabel)
+                              DiscreteFuzzyLabel, DiscreteSetLabel, IntervalFuzzyLabel, IntervalLabel,
+                              RandomLabel, GaussianFuzzyLabel)
 
 __all__ = [
     "GenericWeakLabel",
@@ -9,5 +10,7 @@ __all__ = [
     "DiscreteFuzzyLabel",
     "DiscreteSetLabel",
     "IntervalFuzzyLabel",
-    "IntervalLabel"
+    "IntervalLabel",
+    "RandomLabel",
+    "GaussianFuzzyLabel"
 ]

@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.stats as stats
+from sklearn.base import BaseEstimator, TransformerMixin
 
 def to_probs(ys, uniform=False):
     if ys.ndim < 2:
@@ -76,3 +77,23 @@ def bet_entropy(orthop, n_classes):
         den = stats.entropy(unif, base=2)
         h = 0 if num == 0 else num/den
         return h
+
+class DataGenerator(BaseEstimator, TransformerMixin):
+
+    def __init__(self):
+        pass
+
+    def fit(self, X):
+        self.X = X
+        return self
+
+    def transform(self, X):
+        X_res = np.empty(X.shape)
+        for i in range(X.shape[0]):
+            for j in range(X.shape[1]):
+                X_res[i,j] = X[i,j].sample_value()
+        return X_res
+
+    def fit_transform(self, X):
+        self.fit(X)
+        return self.transform(self.X)

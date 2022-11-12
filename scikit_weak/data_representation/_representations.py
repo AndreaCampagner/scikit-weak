@@ -3,6 +3,9 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 class GenericWeakLabel(ABC):
+    '''
+      A generic class to represent weak labels or weak data
+    '''
     @abstractmethod
     def sample_value(self):
         pass
@@ -17,6 +20,9 @@ class GenericWeakLabel(ABC):
 
 
 class FuzzyLabel(ABC):
+    '''
+    A generic trait to represent fuzzy labels or fuzzy data
+    '''
     @abstractmethod
     def __getitem__(self, val):
         pass
@@ -27,14 +33,56 @@ class FuzzyLabel(ABC):
 
 
 class ContinuousWeakLabel(GenericWeakLabel):
+    '''
+    A generic trait to represent continuous weak labels or data
+    '''
     def basic_type(self):
         return np.float32
 
+class GaussianFuzzyLabel(ContinuousWeakLabel, FuzzyLabel):
+    '''
+    A class to represent fuzzy labels or data based on Gaussian fuzzy numbers
+    '''
+    def __init__(self, mean, std):
+        if std < 0:
+            raise ValueError("Std cannot be lower than 0")
+        self.mean = mean
+        self.std = std
+
+    def sample_value(self):
+        alpha = np.random.random()
+        interval = self.get_cut(alpha)
+        return interval.sample_value()
+
+    def __eq__(self, other):
+        if isinstance(other, GaussianFuzzyLabel):
+            return (self.mean == other.mean) and (self.std == other.std)
+        else:
+            return False
+
+    def __getitem__(self, val):
+        return np.exp(-(self.mean - val)**2/(2*self.std**2))
+
+    def get_cut(self, alpha):
+        if alpha < 0 or alpha > 1:
+            raise ValueError("Alpha should be between 0 and 1")
+        else:
+            return IntervalLabel( self.mean - self.std*np.sqrt(-2*np.log(alpha)), self.mean + self.std*np.sqrt(-2*np.log(alpha)) )
+
+    def __str__(self):
+        return "Gaussian[%f, %f]" % (self.mean, self.std)
+
 
 class IntervalFuzzyLabel(ContinuousWeakLabel,FuzzyLabel):
+    '''
+    A generic trait to represent interval fuzzy labels or data
+    '''
     pass
 
 class IntervalLabel(IntervalFuzzyLabel):
+    '''
+    A class to represent interval-valued labels or data
+    '''
     def __init__(self, lower, upper):
         if lower > upper:
             raise ValueError("Lower bound cannot be greater than upper bound")
@@ -64,6 +112,9 @@ class IntervalLabel(IntervalFuzzyLabel):
 
 
 class DiscreteWeakLabel(GenericWeakLabel):
+    '''
+    A generic trait to represent discrete weak labels or data
+    '''
     def basic_type(self):
         return np.int32
     
@@ -72,6 +123,9 @@ class DiscreteWeakLabel(GenericWeakLabel):
         pass
 
 class DiscreteFuzzyLabel(DiscreteWeakLabel, FuzzyLabel):
+    '''
+    A class to represent discrete fuzzy labels or data
+    '''
     def __init__(self, classes, n_classes):
         self.n_classes = n_classes
         if isinstance(classes, np.ndarray) and classes.ndim == 1:
@@ -134,7 +188,9 @@ class DiscreteFuzzyLabel(DiscreteWeakLabel, FuzzyLabel):
 
 
 class DiscreteSetLabel(DiscreteFuzzyLabel):
-
+    '''
+    A class to represent discrete set-valued labels or data
+    '''
     def __init__(self, classes, n_classes):
       super().__init__(classes, n_classes)
       for i in self.classes:
@@ -143,3 +199,25 @@ class DiscreteSetLabel(DiscreteFuzzyLabel):
     
     def sample_value(self):
         return np.random.choice(range(self.n_classes), p=self.classes/np.sum(self.classes))
+
+class RandomLabel(ContinuousWeakLabel):
+    '''
+    A class to represent continuous, probabilistic distribution-valued labels or data
+    '''
+    def __init__(self, distrib):
+        self.distrib = distrib
+
+    def sample_value(self):
+        return self.distrib.rvs()
+
+    def __eq__(self, other):
+        if isinstance(other, RandomLabel):
+            return (self.distrib == other.distrib)
+        else:
+            return False
+
+    def __getitem__(self, val):
+        return self.distrib.pdf(val)
+
+    def __str__(self):
+        return str(self.distrib)

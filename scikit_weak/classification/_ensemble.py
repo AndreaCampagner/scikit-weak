@@ -26,8 +26,8 @@ class RRLClassifier(BaseEstimator, ClassifierMixin):
     Attributes
     ----------
 
-    :ivar classifiers: The collection of fitted estimators
-    :vartype classifiers: list of estimators
+    :ivar __classifiers: The collection of fitted estimators
+    :vartype __classifiers: list of estimators
 
     :ivar __ys: The collection of sampled target labels. Each ndarray in ys has the same shape as y
     :vartype __ys: list of ndarrays
